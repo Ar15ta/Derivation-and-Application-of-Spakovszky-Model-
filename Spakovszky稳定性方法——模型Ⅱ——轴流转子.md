@@ -1,3 +1,9 @@
+
+|  属性  |            [[法术表]]             |            |                          |
+| :--: | :----------------------------: | ---------- | ------------------------ |
+|  关联  | [[Spakovszky稳定性方法——模型Ⅱ——轴向管道]] | [[欧拉涡轮方程]] | [[Spakovszky稳定性方法——模型Ⅰ]] |
+| 链接解释 |    转子执行盘的上游连接轴向管道，下游连接间隙或静子    | 直接用        | 惯性导致的额外总压，以及损失在这里有提及     |
+
 ***
 # $Model\space Ⅱ$
 	适用范围：轴向压气机（或风扇）的转子叶片排，作为半执行盘（semi‑actuator disk），连接上游和下游轴向管道。假设叶片稠度足够，可将叶片排视为无厚度的周向均匀装置，仅改变流动的角动量和总压。
@@ -21,7 +27,7 @@
 |        频域无量纲扰动        |    $\delta\hat{V}_x,\ \delta\hat{V}_\theta,\ \delta\hat{P}$    |       $-$       |       $1$       |                                    拉普拉斯变换后                                    |
 |   第 $n$ 谐波傅里叶系数（频域）   | $\delta\tilde{V}_x,\ \delta\tilde{V}_\theta,\ \delta\tilde{P}$ |       $-$       |       $1$       |            $\delta\hat{V}_x = \sum \delta\tilde{V}_x e^{jn\theta}$            |
 |     转子进口相对气流角（稳态）     |                           $\beta_1$                            |  $\text{rad}$   |       $1$       | $\tan\beta_1 = \frac{1 - \hat{\overline{v}}_{\theta1}}{\hat{\overline{v}}_x}$ |
-|       转子出口相对气流角       |                           $\beta_2$                            |  $\text{rad}$   |       $1$       |                                  给定常数（叶片金属角）                                  |
+|       转子出口相对气流角       |                           $\beta_2$                            |  $\text{rad}$   |       $1$       |                                     给定常数                                      |
 |        转子惯性系数         |                     $\lambda_{\text{rot}}$                     |       $-$       |       $1$       |              $\lambda_{\text{rot}} = \frac{c_x/R}{\cos^2\gamma}$              |
 |     损失时间滞后常数（无量纲）     |                            $\tau_R$                            |       $-$       |       $1$       |   通常 $\tau_R = \tau_u \cdot \frac{c_x}{R\cos\gamma\,\hat{\overline{v}}_x}$    |
 |       总压损失（无量纲）       |                  $\hat{l}_R = l_R/(\rho U^2)$                  |       $-$       |       $1$       |                                                                               |
@@ -284,82 +290,3 @@ $$
 \end{bmatrix}
 (s)}
 $$
-# 6. 代码
-```python
-import numpy as np
-
-# ----------------------------------------------------------------------
-# 轴流转子执行盘传递矩阵 (n ≥ 1)
-# 对应你的推导结果（论文式 2.77）
-# ----------------------------------------------------------------------
-def B_rot_n(s, n, Vx_bar, Vtheta_bar1, Vtheta_bar2,
-            tan_beta1, tan_beta2, tan_alpha1,
-            lambda_rot, tau_R, dL_dtanbeta1):
-    """
-    轴流转子执行盘的第 n 阶谐波传递矩阵 (3x3)
-
-    参数
-    ----------
-    s : complex
-        拉普拉斯变量（无量纲）
-    n : int
-        周向谐波数 (n >= 1)
-    Vx_bar : float
-        平均轴向速度（无量纲）
-    Vtheta_bar1 : float
-        转子进口平均周向速度（无量纲）
-    Vtheta_bar2 : float
-        转子出口平均周向速度（无量纲）
-    tan_beta1 : float
-        进口相对气流角的正切（平均值）
-    tan_beta2 : float
-        出口相对气流角的正切（常数）
-    tan_alpha1 : float
-        进口绝对气流角的正切（平均值）
-    lambda_rot : float
-        转子惯性系数
-    tau_R : float
-        损失时间滞后常数
-    dL_dtanbeta1 : complex (或 float)
-        损失对 tan(beta1) 的偏导数，在工作点取值
-
-    返回
-    -------
-    B : 3x3 complex array
-        转子传递矩阵
-    """
-    denom = 1.0 + tau_R * (s + 1j * n)
-    K = dL_dtanbeta1 / (Vx_bar * denom)
-
-    B = np.zeros((3, 3), dtype=complex)
-
-    B[0, 0] = 1.0
-    B[1, 0] = tan_beta2
-
-    B[2, 0] = (tan_beta2 - tan_alpha1 - lambda_rot * (s + 1j * n)
-               - Vtheta_bar2 * tan_beta2 + K * tan_beta1)
-    B[2, 1] = Vtheta_bar1 - K
-    B[2, 2] = 1.0
-
-    return B
-
-
-# 使用示例
-if __name__ == "__main__":
-    s = 0.1 + 0.2j
-    n = 2
-    Vx_bar = 0.5
-    Vtheta_bar1 = 0.3
-    Vtheta_bar2 = 0.6
-    tan_beta1 = 0.4
-    tan_beta2 = 0.5
-    tan_alpha1 = 0.2
-    lambda_rot = 0.15
-    tau_R = 0.2
-    dL_dtanbeta1 = 0.1
-
-    B = B_rot_n(s, n, Vx_bar, Vtheta_bar1, Vtheta_bar2,
-                tan_beta1, tan_beta2, tan_alpha1,
-                lambda_rot, tau_R, dL_dtanbeta1)
-    print("B_rot_n =\n", B)
-```

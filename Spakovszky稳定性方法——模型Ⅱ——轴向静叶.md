@@ -1,3 +1,9 @@
+
+|  属性  |            [[法术表]]             |
+| :--: | :----------------------------: |
+|  关联  | [[Spakovszky稳定性方法——模型Ⅱ——轴流转子]] |
+| 链接解释 |              一脉相承              |
+***
 # $Model\space Ⅱ$
     适用范围：轴向压气机（或风扇）的静子叶片排，作为半执行盘（semi‑actuator disk），连接上游和下游轴向管道。模型假设叶片稠度足够，可将叶片排视为无厚度的周向均匀装置，仅改变流动的周向速度（去旋）和总压。适用于不可压、小扰动、频域稳定性分析。
 
@@ -123,34 +129,3 @@ $$
 ,\qquad
 \forall n \ge 0
 $$
-# 代码
-```python
-import numpy as np
-
-def B_sta(s, n, tan_alpha2, tan_alpha1, Vx_bar, Vtheta1_bar, Vtheta2_bar,
-          dL_dtan, lambda_sta, tau_S):
-    """
-    轴向静叶传递矩阵 (Spakovszky 2000, Eq. 2.101)
-    输入:
-        s            : 拉普拉斯变量 (复数)
-        n            : 周向波数 (仅用于与其他组件接口一致)
-        tan_alpha2   : 出口绝对气流角正切 (常数)
-        tan_alpha1   : 进口绝对气流角正切 (常数)
-        Vx_bar       : 平均轴向速度 (无量纲)
-        Vtheta1_bar  : 进口平均周向速度 (无量纲)
-        Vtheta2_bar  : 出口平均周向速度 (无量纲)
-        dL_dtan      : 稳态损失对 tan(alpha1) 的导数 (工作点值)
-        lambda_sta   : 静叶惯性系数 = c_x/(R cos²γ)
-        tau_S        : 无量纲损失滞后时间
-    返回:
-        3x3 复数矩阵
-    """
-    denom = Vx_bar * (1.0 + s * tau_S)
-    term1 = -Vtheta2_bar * tan_alpha2 + dL_dtan * tan_alpha1 / denom - s * lambda_sta
-    term2 = Vtheta1_bar - dL_dtan / denom
-    return np.array([
-        [1.0,              0.0,              0.0],
-        [tan_alpha2,       0.0,              0.0],
-        [term1,            term2,            1.0]
-    ], dtype=complex)
-```

@@ -1,3 +1,8 @@
+|  属性  |   [[法术表]]    |          |           |           |            |           |
+| :--: | :----------: | :------: | :-------: | :-------: | :--------: | :-------: |
+|  关联  | [[涡量、旋度恒等式]] | [[欧拉方程]] | [[ODE求解]] | [[傅里叶变换]] | [[拉普拉斯变换]] | [[PDE求解]] |
+| 链接解释 |    两个都用上了    |   基础方程   |    解！     |  用来消时间导数  |  用来消周向导数   |    解！     |
+***
 # $Model\space Ⅱ$
 	Model II 的轴向和径向传递矩阵构建了一个灵活，简约的稳定性预测艺术品。这里是它的开始，最上游的组件。
 
@@ -552,99 +557,3 @@ j e^{n \hat{x}} & -j e^{-n \hat{x}} & \left(\displaystyle\frac{\hat{\overline{v}
 \end{bmatrix}
 $$
 这是简化为了和论文对上，便于使用。
-# 3. 代码
-```python
-import numpy as np
-
-def Tn_ax(x, s, n, Vx_bar, Vtheta_bar, x0=0.0):
-    """
-    轴向管道传递矩阵（n >= 1）
-    基于用户 .md 文件中的公式，显式包含参考点 x0。
-    将上游系数 [A_n; B_n; C_n] 映射到下游位置 x 处的扰动状态 [dVx; dVtheta; dP]
-    状态在 x0 处定义。
-
-    参数
-    ----------
-    x : float
-        无量纲轴向坐标（目标位置）
-    s : complex
-        拉普拉斯变量（无量纲）
-    n : int
-        周向波数（n >= 1）
-    Vx_bar : float
-        无量纲平均轴向速度
-    Vtheta_bar : float
-        无量纲平均周向速度
-    x0 : float, optional
-        参考点坐标（状态定义的位置），默认为 0.0
-
-    返回
-    -------
-    T : 3x3 numpy complex array
-        传递矩阵
-    """
-    # 定义辅助量
-    k_n = s / Vx_bar + 1j * n * Vtheta_bar / Vx_bar
-    lambda_A = s + n * (Vx_bar + 1j * Vtheta_bar)
-    lambda_B = s - n * Vx_bar + 1j * n * Vtheta_bar
-
-    # 相对距离
-    dx = x - x0
-
-    # 指数项（相对于 x0）
-    exp_n_dx = np.exp(n * dx)          # e^{n (x-x0)}
-    exp_n_dx_neg = np.exp(-n * dx)     # e^{-n (x-x0)}
-    exp_kn_dx = np.exp(-k_n * dx)      # e^{-k_n (x-x0)}
-
-    # 矩阵第一行：dVx 各系数
-    row1 = [exp_n_dx, exp_n_dx_neg, exp_kn_dx]
-
-    # 矩阵第二行：dVtheta 各系数
-    coeff_vtheta_c = (Vtheta_bar / Vx_bar - 1j * s / (n * Vx_bar))
-    row2 = [1j * exp_n_dx, -1j * exp_n_dx_neg, coeff_vtheta_c * exp_kn_dx]
-
-    # 矩阵第三行：dP 各系数（积分从 x0 到 x）
-    term_A = -lambda_A / n * (exp_n_dx - 1.0)
-    term_B =  lambda_B / n * (exp_n_dx_neg - 1.0)
-    row3 = [term_A, term_B, 0.0]
-
-    T = np.array([row1, row2, row3], dtype=complex)
-    return T
-
-
-def T0_ax(x, s, Vx_bar, x0=0.0):
-    """
-    轴向管道传递矩阵（n = 0），显式包含参考点 x0。
-    系数向量为 [A0(s); C0(s)]（大小为2），返回 3x2 矩阵。
-    """
-    k0 = s / Vx_bar
-    dx = x - x0
-    exp_k0_dx = np.exp(-k0 * dx)
-
-    # 第一行：dVx
-    row1 = [1.0, 0.0]   # Vx = A0
-    # 第二行：dVtheta
-    row2 = [0.0, (s / Vx_bar) * exp_k0_dx]
-    # 第三行：dP（积分从 x0 到 x）
-    row3 = [-s * dx, 0.0]
-
-    T = np.array([row1, row2, row3], dtype=complex)
-    return T
-
-
-# 使用示例
-if __name__ == "__main__":
-    # 测试参数
-    x = 0.5
-    x0 = 0.2   # 显式指定参考点
-    s = 0.1 + 0.2j
-    n = 2
-    Vx_bar = 0.5
-    Vtheta_bar = 0.3
-
-    Tn = Tn_ax(x, s, n, Vx_bar, Vtheta_bar, x0)
-    print("n=2 传递矩阵（x0=0.2）:\n", Tn)
-
-    T0 = T0_ax(x, s, Vx_bar, x0)
-    print("\nn=0 传递矩阵（x0=0.2）:\n", T0)
-```

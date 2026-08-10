@@ -1,3 +1,9 @@
+
+|  属性  |            [[法术表]]             |              |             |                          |
+| :--: | :----------------------------: | ------------ | ----------- | ------------------------ |
+|  关联  | [[Spakovszky稳定性方法——模型Ⅱ——轴流转子]] | [[涡量、旋度恒等式]] | [[叶轮机械总参数]] | [[Spakovszky稳定性方法——模型Ⅰ]] |
+| 链接解释 |       差不多，都是用匹配条件建立传递矩阵        | 又用           | 出现其中的定义     | 复用非定常总压降，但是速度变成相对速度      |
+***
 # $Model\space Ⅱ$
     激动的盘。
 
@@ -285,94 +291,3 @@ K_{\text{imp}} &= \frac{1}{\hat{\overline v}_{x1}}\,
                 \frac{1}{1 + \tau_{\text{imp}}(s+jn)}
 \end{aligned}
 $$
-# 8. 代码
-```python
-import numpy as np
-
-def B_impeller_n(s, n, AR_imp, R1_R2, tan_beta1, tan_beta2, tan_alpha1,
-                 Vx_bar1, Vr_bar2, Vtheta_bar1, Vtheta_bar2,
-                 lambda_imp, tau_imp, dL_dtanbeta1):
-    """
-    离心转子/叶轮执行盘的第 n 阶谐波传递矩阵 (3x3)
-
-    参数
-    ----------
-    s : complex
-        拉普拉斯变量（无量纲）
-    n : int
-        周向谐波数 (n >= 0)
-    AR_imp : float
-        叶轮面积-密度比 = (ρ₂A₂)/(ρ₁A₁)
-    R1_R2 : float
-        叶轮进口半径与出口半径之比 R1/R2
-    tan_beta1 : float
-        进口相对气流角的正切（平均值）
-    tan_beta2 : float
-        出口相对气流角的正切（常数）
-    tan_alpha1 : float
-        进口绝对气流角的正切（平均值）
-    Vx_bar1 : float
-        进口平均轴向速度（无量纲）
-    Vr_bar2 : float
-        出口平均径向速度（无量纲）
-    Vtheta_bar1 : float
-        进口平均周向速度（无量纲）
-    Vtheta_bar2 : float
-        出口平均周向速度（无量纲）
-    lambda_imp : float
-        叶轮惯性系数
-    tau_imp : float
-        损失时间滞后常数（无量纲）
-    dL_dtanbeta1 : complex or float
-        稳态损失对 tan(beta1) 的偏导数，在工作点取值
-
-    返回
-    -------
-    B : 3x3 complex array
-        离心转子传递矩阵
-    """
-    # 辅助计算 K_imp
-    denom = 1.0 + tau_imp * (s + 1j * n)
-    K_imp = dL_dtanbeta1 / (Vx_bar1 * denom)
-
-    # 矩阵行
-    row1 = [1.0 / AR_imp, 0.0, 0.0]
-    row2 = [tan_beta2 / AR_imp, 0.0, 0.0]
-
-    B31 = (Vx_bar1
-           - (Vr_bar2 + Vtheta_bar2 * tan_beta2) / AR_imp
-           + tan_beta2 / AR_imp
-           - R1_R2 * tan_alpha1
-           - lambda_imp * (s + 1j * n) / AR_imp
-           + K_imp * tan_beta1)
-
-    B32 = Vtheta_bar1 - K_imp
-
-    row3 = [B31, B32, 1.0]
-
-    B = np.array([row1, row2, row3], dtype=complex)
-    return B
-
-
-# 使用示例
-if __name__ == "__main__":
-    s = 0.1 + 0.2j
-    n = 2
-    AR_imp = 1.15
-    R1_R2 = 0.7
-    tan_beta1 = 0.4
-    tan_beta2 = 0.5
-    tan_alpha1 = 0.2
-    Vx_bar1 = 0.5
-    Vr_bar2 = 0.3
-    Vtheta_bar1 = 0.3
-    Vtheta_bar2 = 0.6
-    lambda_imp = 0.8
-    tau_imp = 0.15
-    dL_dtanbeta1 = 0.1
-
-    B = B_impeller_n(s, n, AR_imp, R1_R2, tan_beta1, tan_beta2, tan_alpha1,
-                     Vx_bar1, Vr_bar2, Vtheta_bar1, Vtheta_bar2,
-                     lambda_imp, tau_imp, dL_dtanbeta1)
-    print("B_impeller_n =\n", B)
-```

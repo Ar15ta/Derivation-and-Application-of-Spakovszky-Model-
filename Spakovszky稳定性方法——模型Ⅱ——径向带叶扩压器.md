@@ -1,3 +1,9 @@
+
+|  属性  |            [[法术表]]             |                                |
+| :--: | :----------------------------: | :----------------------------: |
+|  关联  | [[Spakovszky稳定性方法——模型Ⅱ——离心转子]] | [[Spakovszky稳定性方法——模型Ⅱ——轴流转子]] |
+| 链接解释 |           用了其中的匹配关系            |              用了解               |
+***
 # $Model\space Ⅱ$
 	`适用范围：离心压缩机中的径向有叶扩压器（vaned diffuser），作为半执行盘（semi‑actuator disk），连接上游径向空间（如叶轮出口或径向间隙）和下游轴向管道/集气室。模型假设叶片稠度足够，可将叶片排视为无厚度的周向均匀装置，改变流动的径向速度（通过面积‑密度比）和周向速度（去旋），并计入总压损失。适用于不可压、小扰动、频域稳定性分析。`
 
@@ -118,8 +124,8 @@ $$
 最后有：
 $$
 \delta\tilde P_{2} = \delta\tilde P_{1} 
-+ \left[ \hat{\overline v}_{\theta1} - \frac{1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat L_{\text{dif}}^{ss}}{\partial \tan\alpha_1} \right] \delta\tilde V_{\theta1}
-+ \left[ \hat{\overline v}_{r1} - \frac{\hat{\overline v}_{r2} + \hat{\overline v}_{\theta2}\tan\alpha_2}{AR'_{\text{dif}}} - \frac{\lambda_{\text{dif}} \cdot s}{AR'_{\text{dif}}} + \frac{\tan\alpha_1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat L_{\text{dif}}^{ss}}{\partial \tan\alpha_1} \right] \delta\tilde V_{r1}\tag{10}
++ \left[ \hat{\overline v}_{\theta1} - \frac{1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat l_{\text{dif}}^{ss}}{\partial \tan\alpha_1} \right] \delta\tilde V_{\theta1}
++ \left[ \hat{\overline v}_{r1} - \frac{\hat{\overline v}_{r2} + \hat{\overline v}_{\theta2}\tan\alpha_2}{AR'_{\text{dif}}} - \frac{\lambda_{\text{dif}} \cdot s}{AR'_{\text{dif}}} + \frac{\tan\alpha_1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat l_{\text{dif}}^{ss}}{\partial \tan\alpha_1} \right] \delta\tilde V_{r1}\tag{10}
 $$
 # 3. 传递矩阵
 有：
@@ -145,43 +151,10 @@ $$
 \displaystyle \frac{1}{AR'_{\text{dif}}} & 0 & 0 &\\[10pt]
 \displaystyle \frac{\tan\alpha_2}{AR'_{\text{dif}}} & 0 & 0 &\\[12pt]
 \displaystyle
-\hat{\overline v}_{r1} - \frac{\hat{\overline v}_{r2} + \hat{\overline v}_{\theta2}\tan\alpha_2}{AR'_{\text{dif}}} - \frac{\lambda_{\text{dif}} \cdot s}{AR'_{\text{dif}}} + \frac{\tan\alpha_1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat L_{\text{dif}}^{ss}}{\partial \tan\alpha_1}
+\hat{\overline v}_{r1} - \frac{\hat{\overline v}_{r2} + \hat{\overline v}_{\theta2}\tan\alpha_2}{AR'_{\text{dif}}} - \frac{\lambda_{\text{dif}} \cdot s}{AR'_{\text{dif}}} + \frac{\tan\alpha_1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat l_{\text{dif}}^{ss}}{\partial \tan\alpha_1}
 &
 \displaystyle
-\hat{\overline v}_{\theta1} - \frac{1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat L_{\text{dif}}^{ss}}{\partial \tan\alpha_1}
+\hat{\overline v}_{\theta1} - \frac{1}{\hat{\overline v}_{r1}(1+s\tau_{\text{dif}})} \frac{\partial \hat l_{\text{dif}}^{ss}}{\partial \tan\alpha_1}
 & 1
 \end{bmatrix}
 $$
-# 6. Python 实现示例
-
-```python
-import numpy as np
-
-def B_dif(s, n, ARp_dif, tan_alpha2, Vr1_bar, Vtheta1_bar, Vr2_bar, Vtheta2_bar,
-          dL_dtan, lambda_dif, tau_dif):
-    """
-    径向有叶扩压器传递矩阵（明确区分 AR' 与 lambda_dif）
-    输入:
-        s           : 拉普拉斯变量 (复数)
-        n           : 周向波数 (仅用于接口统一)
-        ARp_dif     : 径向投影面积密度比 (rho2*A2')/(rho1*A1')
-        tan_alpha2  : 出口绝对气流角正切
-        Vr1_bar, Vtheta1_bar : 进口平均径向/周向速度 (无量纲)
-        Vr2_bar, Vtheta2_bar : 出口平均径向/周向速度 (无量纲)
-        dL_dtan     : 稳态损失对 tan(alpha1) 的导数 (工作点)
-        lambda_dif  : 惯性系数 (基于通流面积计算)
-        tau_dif     : 无量纲损失滞后时间
-    返回:
-        3x3 复数矩阵
-    """
-    tan_alpha1 = Vtheta1_bar / Vr1_bar
-    denom = Vr1_bar * (1.0 + s * tau_dif)
-    term1 = - (lambda_dif * s + Vr2_bar + Vtheta2_bar * tan_alpha2) / ARp_dif
-    term1 += Vr1_bar + dL_dtan * tan_alpha1 / denom
-    term2 = Vtheta1_bar - dL_dtan / denom
-
-    return np.array([
-        [1.0 / ARp_dif,        0.0,                  0.0],
-        [tan_alpha2 / ARp_dif, 0.0,                  0.0],
-        [term1,                term2,                1.0]
-    ], dtype=complex)
