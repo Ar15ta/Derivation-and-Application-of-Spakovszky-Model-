@@ -7,6 +7,9 @@ __pycache__/
 *.pyc
 *.pyo
 
+# ANSYS BladeGen project (kept locally only)
+Blade_Gen/
+
 # OS / editor
 .DS_Store
 Thumbs.db
