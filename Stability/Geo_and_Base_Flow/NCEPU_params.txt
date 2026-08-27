@@ -1,0 +1,75 @@
+# NCEPU 离心压气机稳定性模型参数文件
+#
+# 本文件只放【几何】—— 一次性填写, 与工况无关。
+# 所有基流/气动参数 (角度、速度、Q/G、AR、lambda、tau、dL/dtanbeta1 等)
+# 均由 NCEPU_CFX_Loader.py 从 CFX 提取的 CSV 逐工况计算并注入参数字典,
+# 无需也不应在此文件填写。
+#
+# 派生几何字段留 0 即由原始几何自动计算; 填非零可手动覆盖。
+#
+# ==================== 几何参数 (一次性填写, 归一化: 长度 = R_3, 面积 = R_3²) ====================
+# 站位约定 (Spakovszky CC3, x=0 在叶轮进口执行盘处):
+#   STA2: 叶轮进口
+#   STA3: 叶轮出口 / 无叶扩压器入口
+#   STA4: 无叶扩压器出口 / 容腔入口
+# 全局归一化基准 R_3 = 叶轮出口轮缘半径 (故 radial_sta3 = 1.0)。
+#
+# 命名约定: 多重下标变量"物理意义在前, 站位在后", 如 R_3, b_3, beta_blade_3。
+
+# ── 原始几何 (有量纲, 供 CSV 加载器计算派生量) ──
+# R_3:              叶轮出口轮缘半径 [m]        (全局归一化基准, 对应 STA3)
+# r_2h:             叶轮进口轮毂半径 [m]
+# r_2s:             叶轮进口轮盖半径 [m]
+# b_3:              叶轮出口宽度 (STA3) [m]
+# r_4:              无叶扩压器出口半径 (STA4) [m]
+# b_4:              无叶扩压器出口宽度 (STA4) [m] (参考, Q/G 已含宽度变化效应)
+# l_comp:           叶轮流道子午长度 [m]         (用于惯性系数 λ)
+# beta_blade_3_deg: 叶轮出口(STA3)叶片金属角 χ3 [°] (径向叶片=0, 后掠<0; 用于 Wiesner 滑移估算)
+# Z_blades:         主叶片数 [-]                (用于 Wiesner 滑移因子与出口堵塞面积)
+# Z_split:          分裂/短叶片数 [-]            (无分流叶片填 0)
+# t_imp:            叶轮出口(STA3)单个尾缘厚度 [m] (用于出口流通面积堵塞, 总流通面积 = b_3·(2πR_3 − (Z_blades+Z_split)·t_imp))
+# tau_u:            损失时间滞后的经验系数 [-]   (人工给定, 通常 1.0~1.25; τ_imp = tau_u·2s_imp/(Ŵ1+Ŵ2))
+# fluid:            CoolProp 工质名 [-]          (用于由静温静压查声速、总温总压查焓; sCO2 填 CO2)
+# z_axis:           CFD 圆柱坐标系 +Z 指向 ["down"=由入口指向叶轮内部(默认) | "up"=由叶轮内部指向入口]
+#                   与转速符号共同决定切向速度如何翻成"旋转方向为正"的模型约定
+R_3 = 0.04
+r_2h = 0.009
+r_2s = 0.0202
+b_3 = 0.004
+r_4 = 0.06
+b_4 = 0.004
+l_comp = 0.0409
+beta_blade_3_deg = -37.5
+Z_blades = 8
+Z_split = 8
+t_imp = 0.0018
+tau_u = 1.0
+fluid = CO2
+# Z轴朝向，down表示从入口指向轮毂，up则反之
+z_axis = down
+
+# ── 派生几何 (无量纲, 可由原始几何自动计算; 也可手动填写覆盖) ──
+# radial_sta2 = r_2rms/R_3,  r_2rms = sqrt((r_2s² + r_2h²)/2)
+# area_sta2   = π·(r_2s² − r_2h²) / R_3²
+# radial_sta3 = 1.0
+# area_sta3   = 2π·R_3·b_3 / R_3²
+# radial_sta4 = r_4 / R_3
+# mu_up       = R_3 / r_2rms
+# mu_plenum   = R_3 / r_4
+radial_sta2 = 0.0
+area_sta2 = 0.0
+radial_sta3 = 1.0
+area_sta3 = 0.0
+radial_sta4 = 0.0
+
+# mu_up / mu_plenum 也可由 r_2rms / r_4 自动算出, 留 0 即可
+mu_up = 0.0
+mu_plenum = 0.0
+
+# s_imp = l_comp / R_3, 留 0 自动算
+s_imp = 0.0
+
+# ==================== 以下基流全部由 CFX CSV 提供, 勿在此填写 ====================
+# (列出仅供对照: beta1/beta2/alpha1/alpha2_imp_deg,
+#  Vx_bar1/Vtheta_bar1/Vr_bar2/Vtheta_bar2_imp,
+#  Vx_up, Q, G, AR_imp, lambda_imp, tau_imp, dL_dtanbeta1_imp)
