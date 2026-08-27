@@ -1,1 +1,2 @@
 这一版用稳态CFD输入，文件中有华北电力大学超临界二氧化碳压气机某一工况点的CFD结果作为输入的案例。
+![Uploading NCEPU_Eigenvalues_n1-4_-32500rpm.png…]()
