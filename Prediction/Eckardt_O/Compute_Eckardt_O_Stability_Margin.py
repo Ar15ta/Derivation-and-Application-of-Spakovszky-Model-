@@ -22,15 +22,17 @@ if STABILITY_ROOT not in sys.path:
 # 均值线包路径
 MEANLINE_PKG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-    "MeanLIne_Design", "RadCompressor_MeanLine", "radcomp-main"
+    "MeanLIne_Design", "radcomp-main"
 )
 YAML_DATA = os.path.join(MEANLINE_PKG, "data", "known_compressors.yml")
 if MEANLINE_PKG not in sys.path:
     sys.path.insert(0, MEANLINE_PKG)
 
-from Geo_and_Base_Flow.Eckardt_O_Geo_Calculator import (
-    compute_base_flow, load_yaml, find_record
-)
+# 均值线后端: radcomp (impeller 损失模型已替换为 Frate 组合模型)
+from Geo_and_Base_Flow import Eckardt_O_Geo_Calculator as _geo_rc
+# 重新导出, 供 Post_Process/Plot 脚本直接 import
+load_yaml = _geo_rc.load_yaml
+find_record = _geo_rc.find_record
 from Model.Model_Eckardt_O import build_cc3_characteristic_matrix
 from Matrix.rotor import load_params
 from Matrix.impeller import compute_impeller_params
@@ -86,7 +88,7 @@ def update_params_from_geo(params, geo_data):
 # ──────────────────────────────
 def sweep_eigenvalues(record, rpm, m_values, n_max=5,
                       sigma_range=(-6.0, 2.0), omega_range=(-6.0, 6.0),
-                      max_modes=1, true_root_tol=1e-10,
+                      max_modes=2, true_root_tol=1e-10,
                       early_stop=True):
     """逐工况计算特征值
 
@@ -102,15 +104,17 @@ def sweep_eigenvalues(record, rpm, m_values, n_max=5,
                    'PR': ..., 'eff': ...}
     """
     base_params = load_params(PARAMS_FILE)
+    _compute_base_flow = _geo_rc.compute_base_flow
 
     all_results = []
     n_range = range(1, n_max + 1)
+    _prev_primary = {}
 
     for i, m_flow in enumerate(m_values):
         print(f"  [{i+1}/{len(m_values)}] m = {m_flow:.3f} kg/s ...",
               end=" ", flush=True)
         try:
-            geo_data = compute_base_flow(record, rpm, m_flow)
+            geo_data = _compute_base_flow(record, rpm, m_flow)
         except RuntimeError as e:
             print(f"SKIP ({e})")
             continue
@@ -138,8 +142,15 @@ def sweep_eigenvalues(record, rpm, m_values, n_max=5,
                                 omega_range=omega_range,
                                 verbose=False,
                                 true_root_tol=true_root_tol)
-            eigs_sorted = sorted(found, key=lambda x: x.real,
-                                 reverse=True)[:max_modes]
+            found_sorted = sorted(found, key=lambda x: x.real, reverse=True)
+
+            # 热启动: 优先选择离上一流量点参考根最近的根, 避免 σ 排序交换导致模态跳变
+            ref = _prev_primary.get(n_val)
+            if ref is not None and found_sorted:
+                found_sorted.sort(key=lambda e: abs(e - ref))
+            eigs_sorted = found_sorted[:max_modes]
+            if eigs_sorted:
+                _prev_primary[n_val] = eigs_sorted[0]
             eigs_n[n_val] = eigs_sorted
             if any(eig.real > 0 for eig in eigs_sorted):
                 unstable_detected = True
@@ -356,9 +367,9 @@ if __name__ == '__main__':
                         help='禁用早停: 即使检测到不稳定也扫完所有流量点')
     args = parser.parse_args()
 
-    # 加载 YAML 数据
-    records = load_yaml(YAML_DATA)
-    record = find_record(records, "Eckardt O")
+    # 加载几何 record
+    records = _geo_rc.load_yaml(YAML_DATA)
+    record = _geo_rc.find_record(records, "Eckardt O")
 
     # 确定流量范围
     if args.m is not None:

@@ -29,14 +29,14 @@ from Prediction.Eckardt_O.Compute_Eckardt_O_Stability_Margin import (
 # 均值线包路径
 MEANLINE_PKG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "MeanLIne_Design", "RadCompressor_MeanLine", "radcomp-main"
+    "MeanLIne_Design", "radcomp-main"
 )
 YAML_DATA = os.path.join(MEANLINE_PKG, "data", "known_compressors.yml")
 
 # 实验曲线路径
 EXP_CSV = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "MeanLIne_Design", "RadCompressor_MeanLine", "Validation", "Eckardt_Exp_Curve.csv"
+    "MeanLIne_Design", "Validation", "Eckardt_Exp_Curve.csv"
 )
 
 
@@ -81,22 +81,44 @@ def parse_exp_curve(csv_path):
     return data
 
 
+def _is_unstable(result):
+    """检查单个计算结果中是否存在不稳定特征值 (σ>0)"""
+    for n_val, eigs in result['eigenvalues'].items():
+        for eig in eigs:
+            if eig.real > 0:
+                return True
+    return False
+
+
 def compute_sweep_below_mid(record, rpm, m_start, m_design,
-                            step_norm=0.05, n_max=5, max_steps=15):
+                            step_norm=0.03, n_max=4, max_steps=20):
+
     """从 m_start 开始按归一化步长向下扫，直到出现不稳定根或步数耗尽
 
-    返回 (all_results, mid_idx, boundary_msg)
+    若起点已不稳定，自动向上（高流量方向）扩展以找到稳定区起点。
+    返回 (all_results, boundary_msg)
     """
-    all_results = []
+    step = step_norm * m_design
+
+    # 先试算起点，若已不稳定则向上扩展找稳定区
+    trial = sweep_eigenvalues(record, rpm, [m_start], n_max=n_max)
+    if trial and _is_unstable(trial[0]):
+        m_search = m_start + 3.0 * step
+        for _ in range(6):
+            trial = sweep_eigenvalues(record, rpm, [m_search], n_max=n_max)
+            if trial and not _is_unstable(trial[0]):
+                m_start = m_search
+                break
+            m_search += step
+
     m_vals = [m_start]
     for i in range(max_steps):
-        m_next = m_vals[-1] - step_norm * m_design
+        m_next = m_vals[-1] - step
         if m_next <= 0:
             break
         m_vals.append(m_next)
 
     results = sweep_eigenvalues(record, rpm, m_vals, n_max=n_max)
-    all_results.extend(results)
 
     # 检查是否出现不稳定根
     boundary_msg = None
@@ -116,7 +138,7 @@ def compute_sweep_below_mid(record, rpm, m_start, m_design,
         if boundary_msg:
             break
 
-    return all_results, boundary_msg
+    return results, boundary_msg
 
 
 # ──────────────────────────────
@@ -279,7 +301,7 @@ if __name__ == '__main__':
                         help='已有计算结果 CSV 文件路径 (跳过计算直接绘图)')
     parser.add_argument('--rpm', type=float, default=None,
                         help='指定单转速 (默认遍历全部转速)')
-    parser.add_argument('--n-max', type=int, default=5,
+    parser.add_argument('--n-max', type=int, default=4,
                         help='最大周向波数 n (绘制 n=1..n_max)')
     parser.add_argument('--paper/--no-paper', dest='paper', default=True,
                         action='store_true',
@@ -333,28 +355,21 @@ if __name__ == '__main__':
     for rpm in target_rpms:
         points = exp_data[rpm]
         m_flows = [p[0] for p in points]
-        m_mid = (min(m_flows) + max(m_flows)) / 2
-        m_mid_norm = m_mid / args.m_design
+        m_exp_max = max(m_flows)
+        m_exp_min = min(m_flows)
 
-        # 限制扫描起点: 以 14000rpm 为基准 (阈值 1.0), 按转速比例调整
-        # 高转速失稳点流量更高 → 阈值拉高; 低转速 → 阈值降低
-        start_threshold = rpm / 14000.0
-        if m_mid_norm > start_threshold:
-            m_start = start_threshold * args.m_design
-            start_note = (f" (中点 {m_mid_norm:.3f} > {start_threshold:.3f}, "
-                          f"起点限制为 {start_threshold:.3f})")
-        else:
-            m_start = m_mid
-            start_note = ""
+        # 从设计点流量(按转速比例)开始往下扫到失速
+        # 若起点已失稳，compute_sweep_below_mid 会自动向上扩展找稳定区
+        m_start = (rpm / 14000.0) * args.m_design
 
         print(f"\n{'='*60}")
-        print(f"  {int(rpm)} rpm: 实验流量 {min(m_flows):.2f} ~ {max(m_flows):.2f} kg/s, "
-              f"起点 m = {m_start:.3f} (m/m_d = {m_start/args.m_design:.3f}){start_note}")
+        print(f"  {int(rpm)} rpm: 实验流量 {m_exp_min:.2f} ~ {m_exp_max:.2f} kg/s, "
+              f"起点 m = {m_start:.3f} (m/m_d = {m_start/args.m_design:.3f})")
         print(f"{'='*60}")
 
         all_results, boundary_msg = compute_sweep_below_mid(
             record, rpm, m_start, args.m_design,
-            step_norm=0.05, n_max=5, max_steps=15)
+            step_norm=0.03, n_max=args.n_max, max_steps=20)
 
         if boundary_msg:
             print(f"  [!] {boundary_msg}")

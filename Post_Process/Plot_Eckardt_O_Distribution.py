@@ -73,7 +73,7 @@ PARAMS_FILE = os.path.join(
 # 均值线包路径
 MEANLINE_PKG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "MeanLIne_Design", "RadCompressor_MeanLine", "radcomp-main"
+    "MeanLIne_Design", "radcomp-main"
 )
 YAML_DATA = os.path.join(MEANLINE_PKG, "data", "known_compressors.yml")
 
