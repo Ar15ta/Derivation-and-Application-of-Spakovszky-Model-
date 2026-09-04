@@ -76,7 +76,7 @@ def B_imp_n_num(s, n, params=None):
            - (Vr_bar2 + Vtheta_bar2 * tan_beta2) / AR_imp
            - lambda_imp * (s + 1j * n) / AR_imp
            - R1_R2 * tan_alpha1
-           - Vx_bar1
+           + Vx_bar1
            + K_imp * tan_beta1)
 
     B32 = Vtheta_bar1 - K_imp
